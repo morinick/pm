@@ -14,6 +14,7 @@ RUN ln -s ld-musl-x86_64.so.1 /dist/lib/libc.musl-x86_64.so.1
 FROM scratch
 
 COPY --from=build /dist /
+COPY --from=build /app/migrations /migrations
 
 EXPOSE 5000
 

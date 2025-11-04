@@ -17,6 +17,7 @@ import (
 	usersHTTP "passman/cmd/internal/users/adapters/http"
 	usersUsecases "passman/cmd/internal/users/usecases"
 	"passman/internal/backups"
+	"passman/pkg/database/migrator"
 	database "passman/pkg/database/sqlite"
 	"passman/pkg/logger"
 	"passman/pkg/session"
@@ -52,6 +53,16 @@ func main() {
 		os.Exit(1)
 	}
 	defer dbStorage.Close()
+
+	m, err := migrator.NewMigrator("file:///migrations", "data.db")
+	if err != nil {
+		slog.Error("Migrator error", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if err := m.Up(); err != nil {
+		slog.Error("Up migrations error", slog.String("error", err.Error()))
+	}
+	m.Close()
 
 	backupController, err := backups.New("data.db", "/backup", flags["key"])
 	if err != nil {

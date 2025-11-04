@@ -16,7 +16,7 @@ import (
 	usersDB "passman/cmd/internal/users/adapters/db"
 	usersHTTP "passman/cmd/internal/users/adapters/http"
 	usersUsecases "passman/cmd/internal/users/usecases"
-	"passman/internal/secrets"
+	"passman/internal/backups"
 	database "passman/pkg/database/sqlite"
 	"passman/pkg/logger"
 	"passman/pkg/session"
@@ -31,6 +31,8 @@ import (
 func main() {
 	mainCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+
+	flags := ParseFlags()
 
 	cfg, err := newConfig()
 	if err != nil {
@@ -51,10 +53,20 @@ func main() {
 	}
 	defer dbStorage.Close()
 
-	ciphers, err := secrets.GenerateSecrets(10, 32)
+	backupController, err := backups.New("data.db", "/backup", flags["key"])
 	if err != nil {
-		slog.Error("Secrets generation error", slog.String("error", err.Error()))
+		slog.Error("Backup controller error", slog.String("error", err.Error()))
 		os.Exit(1)
+	}
+
+	// If saved_database.bak exist, then ciphers have already been read from it
+	if backupController.Ciphers == nil {
+		ciphers, err := backups.GenerateCiphers(10, 32)
+		if err != nil {
+			slog.Error("Secrets generation error", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		backupController.Ciphers = ciphers
 	}
 
 	logger.SetNewLoggerByDefault(cfg.LogLevel)
@@ -78,7 +90,7 @@ func main() {
 
 	// Creds domain
 	credsRepository := credsDB.New(dbStorage)
-	credsUsecase := credsUsecases.New(credsRepository, ciphers)
+	credsUsecase := credsUsecases.New(credsRepository, backupController.Ciphers)
 	credsRouter := credsHTTP.NewRouter(credsUsecase, sm, globalValidator)
 	appRouter.Mount("/creds", credsRouter)
 
@@ -101,6 +113,11 @@ func main() {
 		if err := srv.Shutdown(sCtx); err != nil {
 			return err
 		}
+
+		if err := backupController.SaveDatabase("saved_database.bak"); err != nil {
+			return err
+		}
+		slog.Default().Info("Database encrypted", slog.String("key", backupController.DecryptKey))
 
 		slog.Default().Info("Successful shutdown")
 		return nil

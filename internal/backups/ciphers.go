@@ -1,7 +1,8 @@
-package secrets
+package backups
 
 import (
 	"crypto/rand"
+
 	"passman/pkg/cipher"
 )
 
@@ -14,14 +15,10 @@ func generateRandom(size int) ([]byte, error) {
 	return b, nil
 }
 
-func GenerateSecrets(count, size int) ([]cipher.AESCipher, error) {
+func GenerateCiphers(count, size int) ([]cipher.AESCipher, error) {
 	ciphers := make([]cipher.AESCipher, 0, count)
 	for range count {
-		key, err := generateRandom(size)
-		if err != nil {
-			return nil, err
-		}
-		ciph, err := cipher.New(key)
+		ciph, err := GenerateCipher(size)
 		if err != nil {
 			return nil, err
 		}
@@ -29,4 +26,13 @@ func GenerateSecrets(count, size int) ([]cipher.AESCipher, error) {
 	}
 
 	return ciphers, nil
+}
+
+func GenerateCipher(size int) (*cipher.AESCipher, error) {
+	key, err := generateRandom(size)
+	if err != nil {
+		return nil, err
+	}
+
+	return cipher.New(key)
 }

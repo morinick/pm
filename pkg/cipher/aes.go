@@ -46,6 +46,10 @@ func (c *AESCipher) Decrypt(src []byte) []byte {
 	return join(dstBlocks, '-')
 }
 
+func (c *AESCipher) Key() []byte {
+	return c.key
+}
+
 func split(src []byte, blockSize int) [][]byte {
 	blocks := len(src) / blockSize
 	if len(src)%blockSize > 0 {

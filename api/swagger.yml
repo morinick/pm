@@ -1,0 +1,554 @@
+openapi: 3.0.4
+info:
+  title: Password manager
+  version: 0.0.0
+  description: |-
+    This is a simple application for managing your password in one docker container.
+tags:
+  - name: services
+    description: Operations about services
+  - name: creds
+    description: Operations about credentials
+  - name: users
+    description: Operations about user
+paths:
+#users
+  /users/registration:
+    post:
+      tags:
+        - users
+      summary: Registrate new user.
+      requestBody:
+        required: true
+        description: A JSON object containing the username and password.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Candidate"
+      security: []
+      responses:
+        '200':
+          description: Successful operation. Created session id will save into cookie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserID"
+          headers:
+            Set-Cookie:
+              schema: 
+                type: string
+                example: session=1234sadf; Path=/; HttpOnly
+        '400':
+          description: Invalid input, username already exist
+        '500':
+          description: Internal error
+  /users/login:
+    post:
+      tags:
+        - users
+      summary: Login user.
+      requestBody:
+        required: true
+        description: A JSON object containing the username and password.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Candidate"
+      security: []
+      responses:
+        '200':
+          description: Successful operation. Created session id will save into cookie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserID"
+          headers:
+            Set-Cookie:
+              schema: 
+                type: string
+                example: session=1234sadf; Path=/; HttpOnly
+        '400':
+          description: Invalid input, username not exist or incorrect password
+        '500':
+          description: Internal error
+  /users/logout:
+    delete:
+      tags:
+        - users
+      summary: Logout current user.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Successful operation. Session destroyed
+        '500':
+          description: Internal error
+  /users/update-username:
+    put:
+      tags:
+        - users
+      summary: Update username from the current user in storage.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        description: A JSON object containing old password and new username
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUsername"
+      responses:
+        '200':
+          description: Successful operation. Username updated. Session id updated too
+          headers:
+            Set-Cookie:
+              schema: 
+                type: string
+                example: session=1234sadf; Path=/; HttpOnly
+        '400':
+          description: Invalid input, username already exist or incorrect password
+        '500':
+          description: Internal error
+  /users/update-password:
+    put:
+      tags:
+        - users
+      summary: Update password from the current user in storage.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        description: A JSON object containing old and new password
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePassword"
+      responses:
+        '200':
+          description: Successful operation. Password updated. Session id updated too
+          headers:
+            Set-Cookie:
+              schema: 
+                type: string
+                example: session=1234sadf; Path=/; HttpOnly
+        '400':
+          description: Invalid input, incorrect old password
+        '500':
+          description: Internal error
+  /users/delete:
+    delete:
+      tags:
+        - users
+      summary: Delete current user from storage.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Successful operation. Session and user credentials destroyed
+        '500':
+          description: Internal error
+#creds
+  /creds/{serviceName}:
+    post:
+      tags:
+        - creds
+      summary: Add new cred record to storage.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: serviceName
+          in: path
+          description: The name of the service to which the record will be added
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        description: A JSON object containing cred parameters
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CredRecord"
+      responses:
+        '200':
+          description: Successful operation. Cred record saved and session updated
+          headers:
+            Set-Cookie:
+              schema: 
+                type: string
+                example: session=1234sadf; Path=/; HttpOnly
+        '400':
+          description: Invalid input, cred with passed name already exist
+        '500':
+          description: Internal error
+
+    get:
+      tags:
+        - creds
+      summary: Get cred records by service name
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: serviceName
+          in: path
+          description: The name of the service to which the record will be founded
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation. Session updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CredRecord"
+          headers:
+            Set-Cookie:
+              schema: 
+                type: string
+                example: session=1234sadf; Path=/; HttpOnly
+        '400':
+          description: Invalid input
+        '500':
+          description: Internal error
+    put:
+      tags:
+        - creds
+      summary: Update cred record by service name
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: serviceName
+          in: path
+          description: The name of the service to which the record will be founded
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        description: A JSON object containing cred parameters to update record in storage
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatedCredRecord"
+      responses:
+        '200':
+          description: Successful operation. Session updated
+          headers:
+            Set-Cookie:
+              schema: 
+                type: string
+                example: session=1234sadf; Path=/; HttpOnly
+        '400':
+          description: Invalid input
+        '500':
+          description: Internal error
+    delete:
+      tags:
+        - creds
+      summary: Delete all cred records by service name
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: serviceName
+          in: path
+          description: The name of the service to which the record will be founded
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation. Session updated, all cred records in passed serviceName removed
+          headers:
+            Set-Cookie:
+              schema: 
+                type: string
+                example: session=1234sadf; Path=/; HttpOnly
+        '500':
+          description: Internal error
+  /creds/{serviceName}/{credName}:
+    delete:
+      tags:
+        - creds
+      summary: Delete cred records by service name and cred name
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: serviceName
+          in: path
+          description: The name of the service to which the record will be founded
+          required: true
+          schema:
+            type: string
+        - name: credName
+          in: path
+          description: The name of the cred to which the record will be founded
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation. Session updated, cred record in passed serviceName removed
+          headers:
+            Set-Cookie:
+              schema: 
+                type: string
+                example: session=1234sadf; Path=/; HttpOnly
+        '500':
+          description: Internal error
+#services
+  /services/{serviceName}:
+    post:
+      tags:
+        - services
+      summary: Add new service to storage globally
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: serviceName
+          in: path
+          description: The name of the service
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        description: A logo file which will saved in storage
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+          image/png:
+            schema:
+              type: string
+              format: binary
+          image/svg:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Successful operation. Session updated, new service added to storage, logo file saved into assets directory
+          headers:
+            Set-Cookie:
+              schema: 
+                type: string
+                example: session=1234sadf; Path=/; HttpOnly
+        '400':
+          description: Invalid parameter or mimetype
+        '500':
+          description: Internal error
+    delete:
+      tags:
+        - services
+      summary: Delete service globally
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: serviceName
+          in: path
+          description: The name of the service
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation. Session updated, service and logo file deleted
+          headers:
+            Set-Cookie:
+              schema: 
+                type: string
+                example: session=1234sadf; Path=/; HttpOnly
+        '400':
+          description: Invalid parameter or at least one of the users has been cred record with this service
+        '500':
+          description: Internal error
+  /services/all:
+    get:
+      tags:
+        - services
+      summary: Get all services
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Successful operation. Session updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GetServiceResponse"
+          headers:
+            Set-Cookie:
+              schema: 
+                type: string
+                example: session=1234sadf; Path=/; HttpOnly
+        '500':
+          description: Internal error
+  /services/my:
+    get:
+      tags:
+        - services
+      summary: Get all user services
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Successful operation. Session updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GetServiceResponse"
+          headers:
+            Set-Cookie:
+              schema: 
+                type: string
+                example: session=1234sadf; Path=/; HttpOnly
+        '500':
+          description: Internal error
+  /services/{oldServiceName}/{newServiceName}:
+    put:
+      tags:
+        - services
+      summary: Update name or logo of service
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: oldServiceName
+          in: path
+          description: The old name of the service
+          required: true
+          schema:
+            type: string
+        - name: newServiceName
+          in: path
+          description: The new name of the service (may be equal with old name)
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        description: A logo file which will saved in storage (may be empty)
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+          image/png:
+            schema:
+              type: string
+              format: binary
+          image/svg:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Successful operation. Session updated, service name updated (if not be equal with old name), service logo updated (if not be empty)
+          headers:
+            Set-Cookie:
+              schema: 
+                type: string
+                example: session=1234sadf; Path=/; HttpOnly
+        '400':
+          description: Invalid parameter or mimetype
+        '500':
+          description: Internal error
+  
+components:
+  schemas:
+    Candidate:
+      type: object
+      properties:
+        username:
+          type: string
+          example: "user1"
+        password:
+          type: string
+          example: "user1_password"
+    UserID:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          example: "5cd11cdd-9a49-4dd9-b9f3-48ea9e2b6bb0"
+    UpdateUsername:
+      type: object
+      properties:
+        old_password:
+          type: string
+          description: Password for user authentification
+          example: "old_user_password"
+        username:
+          type: string
+          description: New username
+          example: "new_username"
+    UpdatePassword:
+      type: object
+      properties:
+        old_password:
+          type: string
+          description: Password for user authentification
+          example: "old_user_password"
+        password:
+          type: string
+          description: New password
+          example: "new_password"
+    CredRecord:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the cred
+          example: "main credentials"
+        login:
+          type: string
+          description: User login value in service
+          example: "user_login_in_youtube"
+        password:
+          type: string
+          description: User password value in service
+          example: "user_password_in_youtube"
+    UpdatedCredRecord:
+      type: object
+      properties:
+        old_name:
+          type: string
+          description: Old name of the cred
+          example: "old name"
+        new_name:
+          type: string
+          description: New name of the cred
+          example: "new name"
+        login:
+          type: string
+          description: User login value in service
+          example: "user_login_in_youtube"
+        password:
+          type: string
+          description: User password value in service
+          example: "user_password_in_youtube"
+    GetServiceResponse:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the service
+          example: "youtube"
+        logo_path:
+          type: string
+          description: Path to the service logo
+          example: "/assets/youtube"
+      
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: "session"

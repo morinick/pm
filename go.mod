@@ -7,6 +7,7 @@ toolchain go1.24.8
 require (
 	github.com/alexedwards/argon2id v1.0.0
 	github.com/alexedwards/scs/v2 v2.9.0
+	github.com/gabriel-vasile/mimetype v1.4.10
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/go-chi/httplog/v3 v3.3.0
 	github.com/go-chi/traceid v0.3.0
@@ -20,7 +21,6 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/gabriel-vasile/mimetype v1.4.10 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect

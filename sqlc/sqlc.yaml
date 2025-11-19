@@ -1,0 +1,30 @@
+version: '2'
+overrides:
+  go:
+    overrides:
+      - db_type: "uuid"
+        go_type:
+          import: "github.com/google/uuid"
+          type: "UUID"
+sql:
+  - engine: "sqlite"
+    queries: "services.sql"
+    schema: "../migrations"
+    gen:
+      go:
+        package: "queries"
+        out: "../internal/server/services/adapters/db/queries"
+  - engine: "sqlite"
+    queries: "users.sql"
+    schema: "../migrations"
+    gen:
+      go:
+        package: "queries"
+        out: "../internal/server/users/adapters/db/queries"
+  - engine: "sqlite"
+    queries: "creds.sql"
+    schema: "../migrations"
+    gen:
+      go:
+        package: "queries"
+        out: "../internal/server/creds/adapters/db/queries"

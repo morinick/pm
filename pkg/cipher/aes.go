@@ -3,19 +3,26 @@ package cipher
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"encoding/hex"
+	"fmt"
 )
 
 type AESCipher struct {
 	ciph cipher.Block
-	key  []byte
+	key  string
 }
 
-func New(key []byte) (*AESCipher, error) {
+func New(hexedKey string) (*AESCipher, error) {
+	key, err := hex.DecodeString(hexedKey)
+	if err != nil {
+		return nil, fmt.Errorf("input key must be encoded by hex")
+	}
+
 	c, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
-	return &AESCipher{ciph: c, key: key}, nil
+	return &AESCipher{ciph: c, key: hexedKey}, nil
 }
 
 func (c *AESCipher) Encrypt(src []byte) []byte {
@@ -46,7 +53,7 @@ func (c *AESCipher) Decrypt(src []byte) []byte {
 	return join(dstBlocks, '-')
 }
 
-func (c *AESCipher) Key() []byte {
+func (c *AESCipher) Key() string {
 	return c.key
 }
 

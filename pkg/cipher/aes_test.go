@@ -1,15 +1,13 @@
 package cipher
 
 import (
-	"encoding/hex"
 	"strings"
 	"testing"
 )
 
 func TestAESCipher(t *testing.T) {
 	hexKey := "5f1e40c065ef8e1c99342e8ca567d12f7825fedf25f10a7636effc9f766e7013"
-	key, _ := hex.DecodeString(hexKey)
-	ciph, _ := New(key)
+	ciph, _ := New(hexKey)
 
 	src := []byte("some source string")
 	encryptedSrc := ciph.Encrypt(src)

@@ -1,3 +1,6 @@
+drop table creds;
+
 drop table users;
 
-drop table service_creds;
+drop table services;
+

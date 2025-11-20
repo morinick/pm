@@ -10,7 +10,7 @@ create table services (
   logo text unique not null
 );
 
-create table creds (
+create table accounts (
   id uuid primary key,
   user_id uuid not null,
   service_id uuid not null,

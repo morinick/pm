@@ -1,4 +1,4 @@
-package creds
+package accounts
 
 import (
 	"encoding/hex"
@@ -16,14 +16,14 @@ type QueryParams struct {
 	ServiceName string
 }
 
-type CredsRecordTransfer struct {
+type AccountDTO struct {
 	QueryParams
 	Name     string
 	Login    string
 	Password string
 }
 
-func (crt *CredsRecordTransfer) ToCredsRecord(serviceID uuid.UUID, ciphers []cipher.AESCipher) CredsRecord {
+func (crt *AccountDTO) ToAccount(serviceID uuid.UUID, ciphers []cipher.AESCipher) Account {
 	keyIndx := time.Now().Nanosecond() % len(ciphers)
 
 	src := make([]byte, 0, len(crt.Login)+len(crt.Password)+7)
@@ -31,7 +31,7 @@ func (crt *CredsRecordTransfer) ToCredsRecord(serviceID uuid.UUID, ciphers []cip
 
 	encryptedSrc := ciphers[keyIndx].Encrypt(src)
 
-	return CredsRecord{
+	return Account{
 		ID:        uuid.New(),
 		UserID:    crt.UserID,
 		ServiceID: serviceID,
@@ -41,7 +41,7 @@ func (crt *CredsRecordTransfer) ToCredsRecord(serviceID uuid.UUID, ciphers []cip
 	}
 }
 
-type CredsRecord struct {
+type Account struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
 	ServiceID uuid.UUID
@@ -50,10 +50,10 @@ type CredsRecord struct {
 	Payload   string
 }
 
-func (cr *CredsRecord) ToCredsRecordTransfer(ciphers []cipher.AESCipher) (CredsRecordTransfer, error) {
+func (cr *Account) ToAccountDTO(ciphers []cipher.AESCipher) (AccountDTO, error) {
 	src, err := hex.DecodeString(cr.Payload)
 	if err != nil {
-		return CredsRecordTransfer{}, fmt.Errorf("payload is not in hex encoding")
+		return AccountDTO{}, fmt.Errorf("payload is not in hex encoding")
 	}
 
 	decryptedSrc := ciphers[cr.Secret].Decrypt(src)
@@ -61,10 +61,10 @@ func (cr *CredsRecord) ToCredsRecordTransfer(ciphers []cipher.AESCipher) (CredsR
 	splited := strings.Split(string(decryptedSrc), "'-:-'")
 
 	if len(splited) != 2 {
-		return CredsRecordTransfer{}, fmt.Errorf("separator not found")
+		return AccountDTO{}, fmt.Errorf("separator not found")
 	}
 
-	return CredsRecordTransfer{
+	return AccountDTO{
 		QueryParams: QueryParams{UserID: cr.UserID},
 		Name:        cr.Name,
 		Login:       splited[0][1:],

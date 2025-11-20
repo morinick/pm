@@ -7,7 +7,7 @@ info:
 tags:
   - name: services
     description: Operations about services
-  - name: creds
+  - name: accounts
     description: Operations about credentials
   - name: users
     description: Operations about user
@@ -147,51 +147,51 @@ paths:
           description: Successful operation. Session and user credentials destroyed
         '500':
           description: Internal error
-#creds
-  /creds/{serviceName}:
+#accounts
+  /accounts/{serviceName}:
     post:
       tags:
-        - creds
-      summary: Add new cred record to storage.
+        - accounts
+      summary: Add new account to storage.
       security:
         - cookieAuth: []
       parameters:
         - name: serviceName
           in: path
-          description: The name of the service to which the record will be added
+          description: The name of the service to which the account will be added
           required: true
           schema:
             type: string
       requestBody:
         required: true
-        description: A JSON object containing cred parameters
+        description: A JSON object containing account parameters
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CredRecord"
+              $ref: "#/components/schemas/Account"
       responses:
         '200':
-          description: Successful operation. Cred record saved and session updated
+          description: Successful operation. Account saved and session updated
           headers:
             Set-Cookie:
               schema: 
                 type: string
                 example: session=1234sadf; Path=/; HttpOnly
         '400':
-          description: Invalid input, cred with passed name already exist
+          description: Invalid input, account with passed name already exist
         '500':
           description: Internal error
 
     get:
       tags:
-        - creds
-      summary: Get cred records by service name
+        - accounts
+      summary: Get accounts by service name
       security:
         - cookieAuth: []
       parameters:
         - name: serviceName
           in: path
-          description: The name of the service to which the record will be founded
+          description: The name of the service to which the accounts will be founded
           required: true
           schema:
             type: string
@@ -203,7 +203,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/CredRecord"
+                  $ref: "#/components/schemas/Account"
           headers:
             Set-Cookie:
               schema: 
@@ -215,24 +215,24 @@ paths:
           description: Internal error
     put:
       tags:
-        - creds
-      summary: Update cred record by service name
+        - accounts
+      summary: Update accounts by service name
       security:
         - cookieAuth: []
       parameters:
         - name: serviceName
           in: path
-          description: The name of the service to which the record will be founded
+          description: The name of the service to which the account will be founded
           required: true
           schema:
             type: string
       requestBody:
         required: true
-        description: A JSON object containing cred parameters to update record in storage
+        description: A JSON object containing account parameters to update record in storage
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdatedCredRecord"
+              $ref: "#/components/schemas/UpdatedAccount"
       responses:
         '200':
           description: Successful operation. Session updated
@@ -247,20 +247,20 @@ paths:
           description: Internal error
     delete:
       tags:
-        - creds
-      summary: Delete all cred records by service name
+        - accounts
+      summary: Delete all accounts by service name
       security:
         - cookieAuth: []
       parameters:
         - name: serviceName
           in: path
-          description: The name of the service to which the record will be founded
+          description: The name of the service to which the account will be founded
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: Successful operation. Session updated, all cred records in passed serviceName removed
+          description: Successful operation. Session updated, all accounts in passed serviceName removed
           headers:
             Set-Cookie:
               schema: 
@@ -268,29 +268,29 @@ paths:
                 example: session=1234sadf; Path=/; HttpOnly
         '500':
           description: Internal error
-  /creds/{serviceName}/{credName}:
+  /accounts/{serviceName}/{accountName}:
     delete:
       tags:
-        - creds
-      summary: Delete cred records by service name and cred name
+        - accounts
+      summary: Delete accounts by service name and cred name
       security:
         - cookieAuth: []
       parameters:
         - name: serviceName
           in: path
-          description: The name of the service to which the record will be founded
+          description: The name of the service to which the account will be founded
           required: true
           schema:
             type: string
-        - name: credName
+        - name: accountName
           in: path
-          description: The name of the cred to which the record will be founded
+          description: The name of the account to which the record will be founded
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: Successful operation. Session updated, cred record in passed serviceName removed
+          description: Successful operation. Session updated, account in passed serviceName removed
           headers:
             Set-Cookie:
               schema: 
@@ -501,13 +501,13 @@ components:
           type: string
           description: New password
           example: "new_password"
-    CredRecord:
+    Account:
       type: object
       properties:
         name:
           type: string
           description: Name of the cred
-          example: "main credentials"
+          example: "main account"
         login:
           type: string
           description: User login value in service
@@ -516,7 +516,7 @@ components:
           type: string
           description: User password value in service
           example: "user_password_in_youtube"
-    UpdatedCredRecord:
+    UpdatedAccount:
       type: object
       properties:
         old_name:

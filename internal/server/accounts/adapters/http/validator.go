@@ -26,7 +26,7 @@ func (v *validator) ValidateName(name string) error {
 	return nil
 }
 
-func (v *validator) ValidateCreds(name string, login string, password string) error {
+func (v *validator) ValidateAccount(name string, login string, password string) error {
 	validatingStruct := struct {
 		Name     string `validate:"required,min=3,excludesall=~!@#$%^&*?<>"`
 		Login    string `validate:"required,min=1"`
@@ -38,7 +38,7 @@ func (v *validator) ValidateCreds(name string, login string, password string) er
 	}
 
 	if err := v.v.Struct(validatingStruct); err != nil {
-		return fmt.Errorf("invalid creds")
+		return fmt.Errorf("invalid account parameters")
 	}
 
 	return nil

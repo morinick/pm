@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"passman/internal/server/creds"
+	"passman/internal/server/accounts"
 	"passman/internal/server/infra"
 
 	"github.com/go-chi/chi/v5"
@@ -18,12 +18,12 @@ import (
 
 type Adapter struct {
 	log *slog.Logger
-	cu  credsUsecases
+	cu  accountsUsecases
 	sm  sessionManager
 	v   *validator
 }
 
-func NewRouter(cu credsUsecases, sm sessionManager, v *vldtr.Validate) chi.Router {
+func NewRouter(cu accountsUsecases, sm sessionManager, v *vldtr.Validate) chi.Router {
 	a := &Adapter{
 		log: slog.Default(),
 		cu:  cu,
@@ -35,16 +35,16 @@ func NewRouter(cu credsUsecases, sm sessionManager, v *vldtr.Validate) chi.Route
 
 	router.Use(infra.AuthMiddleware(sm))
 
-	router.Post("/{serviceName}", a.AddCredsRecord)
-	router.Get("/{serviceName}", a.GetCredsRecordsInService)
-	router.Put("/{serviceName}", a.UpdateCredsRecord)
-	router.Delete("/{serviceName}/{credName}", a.RemoveCredRecord)
-	router.Delete("/{serviceName}", a.RemoveAllCredsInService)
+	router.Post("/{serviceName}", a.AddAccount)
+	router.Get("/{serviceName}", a.GetAccountsInService)
+	router.Put("/{serviceName}", a.UpdateAccount)
+	router.Delete("/{serviceName}/{accountName}", a.RemoveAccount)
+	router.Delete("/{serviceName}", a.RemoveAllAccountsInService)
 
 	return router
 }
 
-func (a *Adapter) AddCredsRecord(w http.ResponseWriter, r *http.Request) {
+func (a *Adapter) AddAccount(w http.ResponseWriter, r *http.Request) {
 	userID := uuid.MustParse(a.sm.GetString(r.Context(), "user_id"))
 
 	serviceName := chi.URLParam(r, "serviceName")
@@ -59,18 +59,18 @@ func (a *Adapter) AddCredsRecord(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}{}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		a.log.ErrorContext(r.Context(), "AddNewServiceCreds: failed parsing body", slog.Any("error", err))
+		a.log.ErrorContext(r.Context(), "AddAccount: failed parsing body", slog.Any("error", err))
 		infra.ErrorHandler(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	if err := a.v.ValidateCreds(body.Name, body.Login, body.Password); err != nil {
+	if err := a.v.ValidateAccount(body.Name, body.Login, body.Password); err != nil {
 		infra.ErrorHandler(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	transfer := creds.CredsRecordTransfer{
-		QueryParams: creds.QueryParams{
+	transfer := accounts.AccountDTO{
+		QueryParams: accounts.QueryParams{
 			ServiceName: serviceName,
 			UserID:      userID,
 		},
@@ -79,8 +79,8 @@ func (a *Adapter) AddCredsRecord(w http.ResponseWriter, r *http.Request) {
 		Password: body.Password,
 	}
 
-	if err := a.cu.AddCredsRecord(r.Context(), transfer); err != nil {
-		code, msg := a.ParseUsecaseError(r.Context(), "AddNewServiceCreds", err)
+	if err := a.cu.AddAccount(r.Context(), transfer); err != nil {
+		code, msg := a.ParseUsecaseError(r.Context(), "AddAccount", err)
 		infra.ErrorHandler(w, code, msg)
 		return
 	}
@@ -88,7 +88,7 @@ func (a *Adapter) AddCredsRecord(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (a *Adapter) GetCredsRecordsInService(w http.ResponseWriter, r *http.Request) {
+func (a *Adapter) GetAccountsInService(w http.ResponseWriter, r *http.Request) {
 	userID := uuid.MustParse(a.sm.GetString(r.Context(), "user_id"))
 
 	serviceName := chi.URLParam(r, "serviceName")
@@ -97,9 +97,9 @@ func (a *Adapter) GetCredsRecordsInService(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	serviceCreds, err := a.cu.GetCredsRecordsInService(r.Context(), creds.QueryParams{UserID: userID, ServiceName: serviceName})
+	accounts, err := a.cu.GetAccountsInService(r.Context(), accounts.QueryParams{UserID: userID, ServiceName: serviceName})
 	if err != nil {
-		code, msg := a.ParseUsecaseError(r.Context(), "GetServiceCreds", err)
+		code, msg := a.ParseUsecaseError(r.Context(), "GetAccountsInService", err)
 		infra.ErrorHandler(w, code, msg)
 		return
 	}
@@ -110,15 +110,15 @@ func (a *Adapter) GetCredsRecordsInService(w http.ResponseWriter, r *http.Reques
 		Password string `json:"password"`
 	}
 
-	res := make([]responseType, 0, len(serviceCreds))
-	for _, cred := range serviceCreds {
-		res = append(res, responseType{Name: cred.Name, Login: cred.Login, Password: cred.Password})
+	res := make([]responseType, 0, len(accounts))
+	for _, acc := range accounts {
+		res = append(res, responseType{Name: acc.Name, Login: acc.Login, Password: acc.Password})
 	}
 
 	infra.ResponseJSON(w, res, http.StatusOK)
 }
 
-func (a *Adapter) UpdateCredsRecord(w http.ResponseWriter, r *http.Request) {
+func (a *Adapter) UpdateAccount(w http.ResponseWriter, r *http.Request) {
 	userID := uuid.MustParse(a.sm.GetString(r.Context(), "user_id"))
 
 	serviceName := chi.URLParam(r, "serviceName")
@@ -135,18 +135,18 @@ func (a *Adapter) UpdateCredsRecord(w http.ResponseWriter, r *http.Request) {
 	}{}
 
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		a.log.ErrorContext(r.Context(), "UpdateCreds: failed parsing body", slog.Any("error", err))
+		a.log.ErrorContext(r.Context(), "UpdateAccount: failed parsing body", slog.Any("error", err))
 		infra.ErrorHandler(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	if err := a.v.ValidateCreds(body.NewName, body.Login, body.Password); err != nil {
+	if err := a.v.ValidateAccount(body.NewName, body.Login, body.Password); err != nil {
 		infra.ErrorHandler(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	transfer := creds.CredsRecordTransfer{
-		QueryParams: creds.QueryParams{
+	dto := accounts.AccountDTO{
+		QueryParams: accounts.QueryParams{
 			ServiceName: serviceName,
 			UserID:      userID,
 		},
@@ -155,8 +155,8 @@ func (a *Adapter) UpdateCredsRecord(w http.ResponseWriter, r *http.Request) {
 		Password: body.Password,
 	}
 
-	if err := a.cu.UpdateCredsRecord(r.Context(), body.OldName, transfer); err != nil {
-		code, msg := a.ParseUsecaseError(r.Context(), "UpdateCreds", err)
+	if err := a.cu.UpdateAccount(r.Context(), body.OldName, dto); err != nil {
+		code, msg := a.ParseUsecaseError(r.Context(), "UpdateAccount", err)
 		infra.ErrorHandler(w, code, msg)
 		return
 	}
@@ -164,7 +164,7 @@ func (a *Adapter) UpdateCredsRecord(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (a *Adapter) RemoveCredRecord(w http.ResponseWriter, r *http.Request) {
+func (a *Adapter) RemoveAccount(w http.ResponseWriter, r *http.Request) {
 	userID := uuid.MustParse(a.sm.GetString(r.Context(), "user_id"))
 
 	serviceName := chi.URLParam(r, "serviceName")
@@ -173,14 +173,14 @@ func (a *Adapter) RemoveCredRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	credName := chi.URLParam(r, "credName")
-	if err := a.v.ValidateName(credName); err != nil {
+	accountName := chi.URLParam(r, "accountName")
+	if err := a.v.ValidateName(accountName); err != nil {
 		infra.ErrorHandler(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if err := a.cu.RemoveCredsRecord(r.Context(), credName, creds.QueryParams{ServiceName: serviceName, UserID: userID}); err != nil {
-		code, msg := a.ParseUsecaseError(r.Context(), "RemoveCredRecord", err)
+	if err := a.cu.RemoveAccount(r.Context(), accountName, accounts.QueryParams{ServiceName: serviceName, UserID: userID}); err != nil {
+		code, msg := a.ParseUsecaseError(r.Context(), "RemoveAccount", err)
 		infra.ErrorHandler(w, code, msg)
 		return
 	}
@@ -188,7 +188,7 @@ func (a *Adapter) RemoveCredRecord(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (a *Adapter) RemoveAllCredsInService(w http.ResponseWriter, r *http.Request) {
+func (a *Adapter) RemoveAllAccountsInService(w http.ResponseWriter, r *http.Request) {
 	userID := uuid.MustParse(a.sm.GetString(r.Context(), "user_id"))
 
 	serviceName := chi.URLParam(r, "serviceName")
@@ -197,8 +197,8 @@ func (a *Adapter) RemoveAllCredsInService(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := a.cu.RemoveAllCredsInService(r.Context(), creds.QueryParams{ServiceName: serviceName, UserID: userID}); err != nil {
-		code, msg := a.ParseUsecaseError(r.Context(), "RemoveAllCredsInService", err)
+	if err := a.cu.RemoveAllAccountsInService(r.Context(), accounts.QueryParams{ServiceName: serviceName, UserID: userID}); err != nil {
+		code, msg := a.ParseUsecaseError(r.Context(), "RemoveAllAccountsInService", err)
 		infra.ErrorHandler(w, code, msg)
 		return
 	}

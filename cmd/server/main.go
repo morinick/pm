@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
+	accountsDB "passman/internal/server/accounts/adapters/db"
+	accountsHTTP "passman/internal/server/accounts/adapters/http"
+	accountsUsecases "passman/internal/server/accounts/usecases"
 	"passman/internal/server/backups"
-	credsDB "passman/internal/server/creds/adapters/db"
-	credsHTTP "passman/internal/server/creds/adapters/http"
-	credsUsecases "passman/internal/server/creds/usecases"
 	servicesDB "passman/internal/server/services/adapters/db"
 	servicesHTTP "passman/internal/server/services/adapters/http"
 	servicesUsecases "passman/internal/server/services/usecases"
@@ -104,16 +104,16 @@ func main() {
 	)
 
 	// Users domain
-	userDBRepository := usersDB.New(dbStorage)
-	userUsecase := usersUsecases.New(userDBRepository)
+	userRepository := usersDB.New(dbStorage)
+	userUsecase := usersUsecases.New(userRepository)
 	userRouter := usersHTTP.NewRouter(userUsecase, sm, globalValidator)
 	appRouter.Mount("/users", userRouter)
 
-	// Creds domain
-	credsRepository := credsDB.New(dbStorage)
-	credsUsecase := credsUsecases.New(credsRepository, backupController.Ciphers)
-	credsRouter := credsHTTP.NewRouter(credsUsecase, sm, globalValidator)
-	appRouter.Mount("/creds", credsRouter)
+	// Accounts domain
+	accountsRepository := accountsDB.New(dbStorage)
+	accountsUsecase := accountsUsecases.New(accountsRepository, backupController.Ciphers)
+	accountsRouter := accountsHTTP.NewRouter(accountsUsecase, sm, globalValidator)
+	appRouter.Mount("/accounts", accountsRouter)
 
 	// Services domain
 	servicesRepository := servicesDB.New(dbStorage)

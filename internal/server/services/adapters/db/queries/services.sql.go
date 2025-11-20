@@ -27,9 +27,9 @@ func (q *Queries) AddService(ctx context.Context, arg AddServiceParams) error {
 }
 
 const checkExistingRecord = `-- name: CheckExistingRecord :one
-select creds.id from creds
-  where creds.user_id <> ?
-  and creds.service_id in (
+select accounts.id from accounts
+  where accounts.user_id <> ?
+  and accounts.service_id in (
     select services.id from services
       where services.name = ?
   )
@@ -97,8 +97,8 @@ func (q *Queries) GetServicesList(ctx context.Context) ([]GetServicesListRow, er
 
 const getUserServicesList = `-- name: GetUserServicesList :many
 select distinct services.name, services.logo from services
-  left join creds on creds.service_id = services.id
-  where creds.user_id = ?
+  left join accounts on accounts.service_id = services.id
+  where accounts.user_id = ?
 `
 
 type GetUserServicesListRow struct {

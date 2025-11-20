@@ -1,4 +1,4 @@
-drop table creds;
+drop table accounts;
 
 drop table users;
 

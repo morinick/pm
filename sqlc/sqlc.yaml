@@ -22,9 +22,9 @@ sql:
         package: "queries"
         out: "../internal/server/users/adapters/db/queries"
   - engine: "sqlite"
-    queries: "creds.sql"
+    queries: "accounts.sql"
     schema: "../migrations"
     gen:
       go:
         package: "queries"
-        out: "../internal/server/creds/adapters/db/queries"
+        out: "../internal/server/accounts/adapters/db/queries"

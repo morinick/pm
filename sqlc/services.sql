@@ -5,9 +5,9 @@ insert into services (id, name, logo) values (?, ?, ?);
 select id, logo from services where name = ?;
 
 -- name: CheckExistingRecord :one
-select creds.id from creds
-  where creds.user_id <> ?
-  and creds.service_id in (
+select accounts.id from accounts
+  where accounts.user_id <> ?
+  and accounts.service_id in (
     select services.id from services
       where services.name = ?
   );
@@ -17,8 +17,8 @@ select name, logo from services;
 
 -- name: GetUserServicesList :many
 select distinct services.name, services.logo from services
-  left join creds on creds.service_id = services.id
-  where creds.user_id = ?;
+  left join accounts on accounts.service_id = services.id
+  where accounts.user_id = ?;
 
 -- name: UpdateService :exec
 update services set name = ?, logo = ? where name = sqlc.arg(old_name);

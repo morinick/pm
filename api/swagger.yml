@@ -83,7 +83,7 @@ paths:
           description: Successful operation. Session destroyed
         '500':
           description: Internal error
-  /users/update-username:
+  /users/update/username:
     put:
       tags:
         - users
@@ -109,7 +109,7 @@ paths:
           description: Invalid input, username already exist or incorrect password
         '500':
           description: Internal error
-  /users/update-password:
+  /users/update/password:
     put:
       tags:
         - users

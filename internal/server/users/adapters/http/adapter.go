@@ -41,8 +41,8 @@ func NewRouter(ua userUsecase, sm sessionManager, v *vldtr.Validate) chi.Router 
 
 	routerAuth.Use(infra.AuthMiddleware(sm))
 
-	routerAuth.Put("/update-username", a.UpdateUsername)
-	routerAuth.Put("/update-password", a.UpdatePassword)
+	routerAuth.Put("/update/username", a.UpdateUsername)
+	routerAuth.Put("/update/password", a.UpdatePassword)
 	routerAuth.Delete("/delete", a.RemoveUser)
 
 	router.Mount("/", routerAuth)

@@ -37,8 +37,6 @@ func main() {
 	mainCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	flags := ParseFlags()
-
 	cfg, err := newConfig()
 	if err != nil {
 		slog.Error("Configuration error", slog.String("error", err.Error()))
@@ -58,7 +56,7 @@ func main() {
 	}
 	defer dbStorage.Close()
 
-	backupController := backups.New("data.db", "/backup", flags["key"])
+	backupController := backups.New("data.db", "/backup", cfg.MasterKey)
 
 	m, err := migrator.NewMigrator("file:///migrations", "data.db")
 	if err != nil {
@@ -70,7 +68,7 @@ func main() {
 	}
 	m.Close()
 
-	if err := starter.Start(mainCtx, starter.StartOptions{BackupController: backupController, MasterKey: flags["key"], DB: dbStorage}); err != nil {
+	if err := starter.Start(mainCtx, starter.StartOptions{BackupController: backupController, MasterKey: cfg.MasterKey, DB: dbStorage}); err != nil {
 		slog.Error("Starter error", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
@@ -128,7 +126,12 @@ func main() {
 		if err := backupController.SaveBackup(); err != nil {
 			return err
 		}
+
 		slog.Default().Info("Backup created", slog.String("key", backupController.Key))
+
+		if err := saveMasterKey(backupController.Key); err != nil {
+			slog.Default().Warn("Failed saving master key", slog.String("error", err.Error()))
+		}
 
 		slog.Default().Info("Successful shutdown")
 		return nil

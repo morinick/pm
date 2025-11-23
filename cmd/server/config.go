@@ -6,7 +6,8 @@ import (
 )
 
 type config struct {
-	LogLevel slog.Level
+	LogLevel  slog.Level
+	MasterKey string
 }
 
 var logLevelMap = map[string]slog.Level{
@@ -24,5 +25,24 @@ func newConfig() (config, error) {
 		cfg.LogLevel = slog.LevelInfo
 	}
 
+	cfg.MasterKey = loadMasterKey()
+
 	return cfg, nil
+}
+
+func loadMasterKey() string {
+	key, _ := os.ReadFile("master_key")
+	if len(key) == 0 {
+		return os.Getenv("MASTER_KEY")
+	}
+	return string(key)
+}
+
+func saveMasterKey(key string) error {
+	keyFile, err := os.Create("master_key")
+	if err != nil {
+		return err
+	}
+	_, err = keyFile.WriteString(key)
+	return err
 }

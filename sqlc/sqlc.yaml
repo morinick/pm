@@ -7,24 +7,31 @@ overrides:
           import: "github.com/google/uuid"
           type: "UUID"
 sql:
+#  - engine: "sqlite"
+#    queries: "services.sql"
+#    schema: "../migrations"
+#    gen:
+#      go:
+#        package: "queries"
+#        out: "../internal/server/services/adapters/db/queries"
+#  - engine: "sqlite"
+#    queries: "users.sql"
+#    schema: "../migrations"
+#    gen:
+#      go:
+#        package: "queries"
+#        out: "../internal/server/users/adapters/db/queries"
+#  - engine: "sqlite"
+#    queries: "accounts.sql"
+#    schema: "../migrations"
+#    gen:
+#      go:
+#        package: "queries"
+#        out: "../internal/server/accounts/adapters/db/queries"
   - engine: "sqlite"
-    queries: "services.sql"
+    queries: "starter.sql"
     schema: "../migrations"
     gen:
       go:
         package: "queries"
-        out: "../internal/server/services/adapters/db/queries"
-  - engine: "sqlite"
-    queries: "users.sql"
-    schema: "../migrations"
-    gen:
-      go:
-        package: "queries"
-        out: "../internal/server/users/adapters/db/queries"
-  - engine: "sqlite"
-    queries: "accounts.sql"
-    schema: "../migrations"
-    gen:
-      go:
-        package: "queries"
-        out: "../internal/server/accounts/adapters/db/queries"
+        out: "../internal/server/starter/queries"

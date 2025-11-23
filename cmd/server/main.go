@@ -17,6 +17,7 @@ import (
 	servicesDB "passman/internal/server/services/adapters/db"
 	servicesHTTP "passman/internal/server/services/adapters/http"
 	servicesUsecases "passman/internal/server/services/usecases"
+	"passman/internal/server/starter"
 	usersDB "passman/internal/server/users/adapters/db"
 	usersHTTP "passman/internal/server/users/adapters/http"
 	usersUsecases "passman/internal/server/users/usecases"
@@ -59,11 +60,6 @@ func main() {
 
 	backupController := backups.New("data.db", "/backup", flags["key"])
 
-	if err := backupController.LoadBackup(); err != nil && !errors.Is(err, backups.ErrEmptyKey) {
-		slog.Error("Backup controller error", slog.String("error", err.Error()))
-		os.Exit(1)
-	}
-
 	m, err := migrator.NewMigrator("file:///migrations", "data.db")
 	if err != nil {
 		slog.Error("Migrator error", slog.String("error", err.Error()))
@@ -74,21 +70,9 @@ func main() {
 	}
 	m.Close()
 
-	// Means first start
-	firstStartFlag := false // to output a message to the logger
-	if len(backupController.Key) == 0 {
-		firstStartFlag = true
-		ciphers, err := backups.GenerateCiphers(10)
-		if err != nil {
-			slog.Error("Secrets generation error", slog.String("error", err.Error()))
-			os.Exit(1)
-		}
-		backupController.Ciphers = ciphers
-
-		if err := backups.InsertAssetsToDB(dbStorage); err != nil {
-			slog.Error("Inserting assets error", slog.String("error", err.Error()))
-			os.Exit(1)
-		}
+	if err := starter.Start(mainCtx, starter.StartOptions{BackupController: backupController, MasterKey: flags["key"], DB: dbStorage}); err != nil {
+		slog.Error("Starter error", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
 	logger.SetNewLoggerByDefault(cfg.LogLevel)
@@ -128,9 +112,6 @@ func main() {
 
 	g, gCtx := errgroup.WithContext(mainCtx)
 	g.Go(func() error {
-		if firstStartFlag {
-			slog.Default().Info("First starting...")
-		}
 		slog.Default().Info("Server started", slog.String("address", srv.Addr))
 		return srv.ListenAndServe()
 	})

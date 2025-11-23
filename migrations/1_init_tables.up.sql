@@ -20,3 +20,8 @@ create table accounts (
   foreign key (user_id) references users(id) on delete cascade,
   foreign key (service_id) references services(id) on delete set null
 );
+
+create table ciphers (
+  id uuid primary key,
+  key_value text not null
+);

@@ -4,3 +4,4 @@ drop table users;
 
 drop table services;
 
+drop table ciphers;

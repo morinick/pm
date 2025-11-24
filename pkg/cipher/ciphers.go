@@ -1,10 +1,8 @@
-package backups
+package cipher
 
 import (
 	"crypto/rand"
 	"encoding/hex"
-
-	"passman/pkg/cipher"
 )
 
 func generateRandom(size int) ([]byte, error) {
@@ -16,8 +14,8 @@ func generateRandom(size int) ([]byte, error) {
 	return b, nil
 }
 
-func GenerateCiphers(count int) ([]cipher.AESCipher, error) {
-	ciphers := make([]cipher.AESCipher, 0, count)
+func GenerateCiphers(count int) ([]AESCipher, error) {
+	ciphers := make([]AESCipher, 0, count)
 	for range count {
 		ciph, err := GenerateCipher()
 		if err != nil {
@@ -29,11 +27,11 @@ func GenerateCiphers(count int) ([]cipher.AESCipher, error) {
 	return ciphers, nil
 }
 
-func GenerateCipher() (*cipher.AESCipher, error) {
+func GenerateCipher() (*AESCipher, error) {
 	key, err := generateRandom(32)
 	if err != nil {
 		return nil, err
 	}
 
-	return cipher.New(hex.EncodeToString(key))
+	return New(hex.EncodeToString(key))
 }

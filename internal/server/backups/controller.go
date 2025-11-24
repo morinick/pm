@@ -2,7 +2,6 @@ package backups
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,27 +11,30 @@ import (
 	"passman/pkg/cipher"
 )
 
-var ErrEmptyKey = errors.New("empty key")
+type ControllerOptions struct {
+	DBURL     string
+	BackupDir string
+	AssetsDir string
+	MasterKey string
+}
 
 type Controller struct {
 	backupDir        string
 	dbURL            string
 	dbBackupName     string
-	AssetsDir        string
+	assetsDir        string
 	assetsBackupName string
-	Ciphers          []cipher.AESCipher
 	Key              string
 }
 
-func New(dbURL, backupDir, key string) *Controller {
+func New(opts ControllerOptions) *Controller {
 	return &Controller{
-		backupDir:        backupDir,
-		dbURL:            dbURL,
-		dbBackupName:     filepath.Join(backupDir, "db.bak"),
-		AssetsDir:        "/assets",
-		assetsBackupName: filepath.Join(backupDir, "assets.zip"),
-		Ciphers:          nil,
-		Key:              key,
+		backupDir:        opts.BackupDir,
+		dbURL:            opts.DBURL,
+		dbBackupName:     filepath.Join(opts.BackupDir, "db.bak"),
+		assetsDir:        opts.AssetsDir,
+		assetsBackupName: filepath.Join(opts.BackupDir, "assets.zip"),
+		Key:              opts.MasterKey,
 	}
 }
 
@@ -62,7 +64,7 @@ func (ctrl *Controller) LoadBackup() error {
 		return fmt.Errorf("failed deliting standart assets: %w", err)
 	}
 
-	if err := archivator.Decompress(ctrl.assetsBackupName, ctrl.AssetsDir); err != nil {
+	if err := archivator.Decompress(ctrl.assetsBackupName, ctrl.assetsDir); err != nil {
 		return fmt.Errorf("failed decompressing assets: %w", err)
 	}
 
@@ -90,7 +92,7 @@ func (ctrl *Controller) SaveBackup() error {
 		return fmt.Errorf("failed saving db to backup: %w", err)
 	}
 
-	if err := archivator.Compress(ctrl.AssetsDir, ctrl.assetsBackupName); err != nil {
+	if err := archivator.Compress(ctrl.assetsDir, ctrl.assetsBackupName); err != nil {
 		return fmt.Errorf("failed saving assets: %w", err)
 	}
 
@@ -99,7 +101,7 @@ func (ctrl *Controller) SaveBackup() error {
 
 func (ctrl *Controller) getCipher() (*cipher.AESCipher, error) {
 	if len(ctrl.Key) == 0 {
-		ciph, err := GenerateCipher()
+		ciph, err := cipher.GenerateCipher()
 		ctrl.Key = ciph.Key()
 		return ciph, err
 	}
@@ -108,7 +110,7 @@ func (ctrl *Controller) getCipher() (*cipher.AESCipher, error) {
 
 func (ctrl *Controller) checkComponents() error {
 	if len(ctrl.Key) == 0 {
-		return ErrEmptyKey
+		return fmt.Errorf("empty key")
 	}
 
 	files, err := os.ReadDir(ctrl.backupDir)
@@ -176,13 +178,13 @@ func (ctrl *Controller) loadDB(data []byte) error {
 }
 
 func (ctrl *Controller) deleteStandartAssets() error {
-	files, err := os.ReadDir(ctrl.AssetsDir)
+	files, err := os.ReadDir(ctrl.assetsDir)
 	if err != nil {
 		return err
 	}
 
 	for _, file := range files {
-		if err := os.Remove(filepath.Join(ctrl.AssetsDir, file.Name())); err != nil {
+		if err := os.Remove(filepath.Join(ctrl.assetsDir, file.Name())); err != nil {
 			return err
 		}
 	}

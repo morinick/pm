@@ -49,16 +49,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	dbStorage, err := database.NewDB(mainCtx, "data.db")
+	dbStorage, err := database.NewDB(mainCtx, cfg.DBURL)
 	if err != nil {
 		slog.Error("Database error", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 	defer dbStorage.Close()
 
-	backupController := backups.New("data.db", "/backup", cfg.MasterKey)
-
-	m, err := migrator.NewMigrator("file:///migrations", "data.db")
+	m, err := migrator.NewMigrator("file:///migrations", cfg.DBURL)
 	if err != nil {
 		slog.Error("Migrator error", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -68,7 +66,25 @@ func main() {
 	}
 	m.Close()
 
-	if err := starter.Start(mainCtx, starter.StartOptions{BackupController: backupController, MasterKey: cfg.MasterKey, DB: dbStorage}); err != nil {
+	backupController := backups.New(
+		backups.ControllerOptions{
+			DBURL:     cfg.DBURL,
+			BackupDir: cfg.BackupDir,
+			AssetsDir: cfg.AssetsDir,
+			MasterKey: cfg.MasterKey,
+		},
+	)
+
+	ciphers, err := starter.Start(
+		mainCtx,
+		starter.StartOptions{
+			DB:               dbStorage,
+			BackupController: backupController,
+			AssetsDir:        cfg.AssetsDir,
+			MasterKey:        cfg.MasterKey,
+		},
+	)
+	if err != nil {
 		slog.Error("Starter error", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
@@ -93,13 +109,13 @@ func main() {
 
 	// Accounts domain
 	accountsRepository := accountsDB.New(dbStorage)
-	accountsUsecase := accountsUsecases.New(accountsRepository, backupController.Ciphers)
+	accountsUsecase := accountsUsecases.New(accountsRepository, ciphers)
 	accountsRouter := accountsHTTP.NewRouter(accountsUsecase, sm, globalValidator)
 	appRouter.Mount("/accounts", accountsRouter)
 
 	// Services domain
 	servicesRepository := servicesDB.New(dbStorage)
-	servicesUsecase := servicesUsecases.New(servicesRepository, "/assets")
+	servicesUsecase := servicesUsecases.New(servicesRepository, cfg.AssetsDir)
 	servicesRouter := servicesHTTP.NewRouter(servicesUsecase, sm, globalValidator)
 	appRouter.Mount("/services", servicesRouter)
 
@@ -110,6 +126,9 @@ func main() {
 
 	g, gCtx := errgroup.WithContext(mainCtx)
 	g.Go(func() error {
+		if len(cfg.MasterKey) == 0 {
+			slog.Default().Info("It's first starting", slog.String("MasterKey", backupController.Key))
+		}
 		slog.Default().Info("Server started", slog.String("address", srv.Addr))
 		return srv.ListenAndServe()
 	})
@@ -127,7 +146,7 @@ func main() {
 			return err
 		}
 
-		slog.Default().Info("Backup created", slog.String("key", backupController.Key))
+		slog.Default().Info("Backup created")
 
 		if err := saveMasterKey(backupController.Key); err != nil {
 			slog.Default().Warn("Failed saving master key", slog.String("error", err.Error()))

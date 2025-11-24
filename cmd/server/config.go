@@ -7,6 +7,9 @@ import (
 
 type config struct {
 	LogLevel  slog.Level
+	DBURL     string
+	BackupDir string
+	AssetsDir string
 	MasterKey string
 }
 
@@ -25,13 +28,17 @@ func newConfig() (config, error) {
 		cfg.LogLevel = slog.LevelInfo
 	}
 
+	cfg.DBURL = "data.db"
+	cfg.BackupDir = "/backup"
+	cfg.AssetsDir = "/assets"
+
 	cfg.MasterKey = loadMasterKey()
 
 	return cfg, nil
 }
 
 func loadMasterKey() string {
-	key, _ := os.ReadFile("master_key")
+	key, _ := os.ReadFile("master.key")
 	if len(key) == 0 {
 		return os.Getenv("MASTER_KEY")
 	}
@@ -39,7 +46,7 @@ func loadMasterKey() string {
 }
 
 func saveMasterKey(key string) error {
-	keyFile, err := os.Create("master_key")
+	keyFile, err := os.Create("master.key")
 	if err != nil {
 		return err
 	}

@@ -39,9 +39,13 @@ func TestLoadAndSaveBackup(t *testing.T) {
 	file2.Close()
 
 	// test saving backup
-	ControllerToSave := New(testDBFilename, testBackupDir, "")
-	ControllerToSave.AssetsDir = testAssetsDir
-	ControllerToSave.assetsBackupName = filepath.Join(testBackupDir, "assets.zip")
+	params := ControllerOptions{
+		DBURL:     testDBFilename,
+		BackupDir: testBackupDir,
+		AssetsDir: testAssetsDir,
+		MasterKey: "",
+	}
+	ControllerToSave := New(params)
 
 	saveErr := ControllerToSave.SaveBackup()
 	if saveErr != nil {
@@ -49,10 +53,8 @@ func TestLoadAndSaveBackup(t *testing.T) {
 	}
 
 	// test loading backup
-	decryptKey := ControllerToSave.Key
-	ControllerToLoad := New(testDBFilename, testBackupDir, decryptKey)
-	ControllerToLoad.AssetsDir = testAssetsDir
-	ControllerToLoad.assetsBackupName = filepath.Join(testBackupDir, "assets.zip")
+	params.MasterKey = ControllerToSave.Key
+	ControllerToLoad := New(params)
 
 	loadErr := ControllerToLoad.LoadBackup()
 	if loadErr != nil {

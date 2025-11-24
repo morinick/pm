@@ -20,65 +20,63 @@ var errInvalidKey = errors.New("invalid key encoding")
 
 type StartOptions struct {
 	DB               *sql.DB
-	MasterKey        string
 	BackupController *backups.Controller
+	AssetsDir        string
+	MasterKey        string
 }
 
-func Start(ctx context.Context, opts StartOptions) error {
+func Start(ctx context.Context, opts StartOptions) ([]cipher.AESCipher, error) {
 	keys, err := queries.New(opts.DB).GetKeys(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Check if it's the first initialization
+	// 	True: first initialization
+	// 	False: container was restarted
 	if len(keys) == 0 {
 		if len(opts.MasterKey) == 0 {
 			return initData(ctx, opts)
 		}
 
 		if err := opts.BackupController.LoadBackup(); err != nil {
-			return fmt.Errorf("failed loading backup: %w", err)
+			return nil, fmt.Errorf("failed loading backup: %w", err)
 		}
 
 		keys, err := queries.New(opts.DB).GetKeys(ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		ciphs, err := makeCiphers(keys, opts.MasterKey)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		opts.BackupController.Ciphers = ciphs
-
-		return nil
+		return ciphs, nil
 	}
 
-	// Means that container was restarted
 	if len(opts.MasterKey) == 0 {
-		return fmt.Errorf("key not found")
+		return nil, fmt.Errorf("key not found")
 	}
 
 	ciphs, err := makeCiphers(keys, opts.MasterKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	opts.BackupController.Ciphers = ciphs
-
-	return nil
+	return ciphs, nil
 }
 
-func initData(ctx context.Context, opts StartOptions) error {
-	masterCipher, err := backups.GenerateCipher()
+func initData(ctx context.Context, opts StartOptions) ([]cipher.AESCipher, error) {
+	masterCipher, err := cipher.GenerateCipher()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	ciphers, err := backups.GenerateCiphers(10)
+	ciphers, err := cipher.GenerateCiphers(10)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	keys := make([]string, 0, len(ciphers))
@@ -88,17 +86,16 @@ func initData(ctx context.Context, opts StartOptions) error {
 	}
 
 	if err := addKeysToDB(ctx, opts.DB, keys); err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := addAssetsToDB(ctx, opts.DB, opts.BackupController.AssetsDir); err != nil {
-		return err
+	if err := addAssetsToDB(ctx, opts.DB, opts.AssetsDir); err != nil {
+		return nil, err
 	}
 
 	opts.BackupController.Key = masterCipher.Key()
-	opts.BackupController.Ciphers = ciphers
 
-	return nil
+	return ciphers, nil
 }
 
 func makeCiphers(keys []string, masterKey string) ([]cipher.AESCipher, error) {
